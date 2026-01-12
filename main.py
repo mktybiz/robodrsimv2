@@ -410,7 +410,7 @@ robot_uio_users_per_month = st.sidebar.number_input("新規課金登録者数（
 # ----------------------------------------------------
 # タブ定義
 # ----------------------------------------------------
-tab_kpi, tab_summary, tab_graphs, tab_settings  = st.tabs(["🚀 KPI", "📋 サマリー", "📊 グラフ", "⚙ 設定"])
+tab_summary, tab_graphs, tab_settings  = st.tabs(["📋サマリー", "📊 グラフ", "⚙ 設定"])
 
 
 
@@ -841,25 +841,12 @@ months = list(range(1, MONTHS + 1))
 # ----------------------------------------------------
 # Plotly: 5段構成のサブプロット（収益部分は元コード準拠）
 # ----------------------------------------------------
-fig2_colors = ["#1F5DBA", "#F03531", "#7DBBFF", "#F5A3A3"]
+
 fig_colors  = ["#1F5DBA", "#2E8B57", "#DAA520", "#ff9da7"]
 
 with tab_graphs:
 
-    fig2 = go.Figure()
-    fig2.add_trace(go.Bar(x=years_labels, y=annual_total, name="総売上"))
-    fig2.add_trace(go.Bar(x=years_labels, y=annual_expense, name="総支出"))
-    fig2.add_trace(go.Bar(x=years_labels, y=annual_profit, name="年間利益"))
-    fig2.add_trace(go.Scatter(x=years_labels, y=cumulative_loss, name="累損（累計利益）", mode="lines+markers"))
 
-    fig2.update_layout(
-        title="売上・支出・利益・累損",
-        yaxis_title="金額（万円）",
-        barmode="group",
-        colorway=fig2_colors
-    )
-    fig2.update_yaxes(tickformat=",")
-    st.plotly_chart(fig2, use_container_width=True)
 
     fig = make_subplots(
         rows=2,
@@ -1013,46 +1000,12 @@ with tab_graphs:
 
 
 
-# ----------------------------------------------------
-# サマリー
-# ----------------------------------------------------
-with (((((((tab_summary))))))):
-    st.header("サマリー")
-
-    st.write(f"📅 シミュレーション期間：**{years}年（{MONTHS}ヶ月）**")
-    st.write(f"👥 最終月の有料会員数：**{paying_users[-1]:,.0f}人**")
-    st.write(f"🏢 最終月の販売会社数：**{contract_companies[-1]:,.0f}社**")
-
-    st.markdown("---")
-
-    st.write(f"🤖 {years}年間のロボット販売台数：**{sum(new_users):,.0f}台**")
-    st.write(f"💰 {years}年間の総売上：**{sum(total_revenue)/10000:,.0f}万円**")
-    st.write(f"💸 {years}年間の総支出：**{sum(total_expense)/10000:,.0f}万円**")
-    st.write(f"📈 {years}年間の累計利益：**{sum(profit)/10000:,.0f}万円**")
-
-    st.markdown("---")
-    st.caption(f"{years}年間の売上内訳")
-
-    st.write(f"💸 総アプリ課金：**{sum(app_revenue)/10000:,.0f}万円**")
-    st.write(f"💸 総販売手数料：**{sum(commission_revenue)/10000:,.0f}万円**")
-
-    st.markdown("---")
-    st.caption(f"{years}年間の支出内訳")
-
-    total_apl_expense = sum(cost_app_ios_initial) + sum(cost_app_android_initial) + sum(cost_robot_if_dev) + sum(cost_app_ios_bugfix) + sum(cost_app_android_bugfix)
-    st.write(f"💸 総アプリ開発費：**{total_apl_expense/10000:,.0f}万円**")
-
-    total_cld_expense = sum(cost_cloud_initial_arr) + sum(cost_cloud_aws) + sum(cost_cloud_bugfix_arr) + sum(cost_cloud_scale)
-    st.write(f"💸 総クラウド開発費：**{total_cld_expense/10000:,.0f}万円**")
-
-    total_psl_expense = sum(potstill_fte) + sum(cost_potstill_salary)
-    st.write(f"💸 総事業体人件費：**{total_psl_expense/10000:,.0f}万円**")
-
-    st.write(f"💸 総販売ツール費：**{sum(cost_shop_acquisition)/10000:,.0f}万円**")
-    st.write(f"💸 総カスタマーサポート費：**{sum(cost_customer_support)/10000:,.0f}万円**")
 
 
-with tab_kpi:
+
+
+
+with tab_summary:
     st.header("重要指標 (KPI)")
 
     # 1. 重要数字 (Metrics)
@@ -1069,6 +1022,25 @@ with tab_kpi:
 
     st.markdown("---")
 
+    # 年間 売上・支出・利益・累損 グラフ
+    fig2_colors = ["#1F5DBA", "#F03531", "#7DBBFF", "#F5A3A3"]
+    fig2 = go.Figure()
+    fig2.add_trace(go.Bar(x=years_labels, y=annual_total, name="総売上"))
+    fig2.add_trace(go.Bar(x=years_labels, y=annual_expense, name="総支出"))
+    fig2.add_trace(go.Bar(x=years_labels, y=annual_profit, name="年間利益"))
+    fig2.add_trace(go.Scatter(x=years_labels, y=cumulative_loss, name="累損（累計利益）", mode="lines+markers"))
+
+    fig2.update_layout(
+        title="売上・支出・利益・累損",
+        yaxis_title="金額（万円）",
+        barmode="group",
+        colorway=fig2_colors
+    )
+    fig2.update_yaxes(tickformat=",")
+    st.plotly_chart(fig2, use_container_width=True)
+
+    st.markdown("---")
+
     # 2. 内訳グラフ (Breakdown)
     col_g1, col_g2 = st.columns(2)
 
@@ -1081,6 +1053,10 @@ with tab_kpi:
         fig_rev = go.Figure(data=[go.Pie(labels=labels_rev, values=values_rev, hole=.3)])
         fig_rev.update_layout(height=300, margin=dict(t=0, b=0, l=0, r=0))
         st.plotly_chart(fig_rev, use_container_width=True)
+
+        st.caption(f"{years}年間の売上内訳")
+        st.write(f"💸 総アプリ課金：**{sum(app_revenue)/10000:,.0f}万円**")
+        st.write(f"💸 総販売手数料：**{sum(commission_revenue)/10000:,.0f}万円**")
 
     with col_g2:
         st.subheader("支出構成")
@@ -1103,6 +1079,13 @@ with tab_kpi:
         fig_exp = go.Figure(data=[go.Pie(labels=labels_exp, values=values_exp, hole=.3)])
         fig_exp.update_layout(height=300, margin=dict(t=0, b=0, l=0, r=0))
         st.plotly_chart(fig_exp, use_container_width=True)
+
+        st.caption(f"{years}年間の支出内訳")
+        st.write(f"💸 総アプリ開発費：**{val_dev/10000:,.0f}万円**")
+        st.write(f"💸 総クラウド開発費：**{val_cloud/10000:,.0f}万円**")
+        st.write(f"💸 総事業体人件費：**{val_labor/10000:,.0f}万円**")
+        st.write(f"💸 総販売ツール費：**{val_sales/10000:,.0f}万円**")
+        st.write(f"💸 総カスタマーサポート費：**{val_cs/10000:,.0f}万円**")
 
 
 
