@@ -399,7 +399,7 @@ st.sidebar.subheader("ロボット購入率設定")
 num_types_sb = int(st.session_state.get(ui_key("robot.num_types"), 1))
 for i in range(num_types_sb):
     r_name = st.session_state.get(ui_key(f"robot.items.{i}.name"), f"No{i+1}")
-    st.sidebar.slider(f"{r_name} 購入率（%）", 0.0, 10.0, step=0.1, key=ui_key(f"robot.items.{i}.purchase_rate_pct"))
+    st.sidebar.number_input(f"{r_name} 購入率（%）", min_value=0.0, max_value=10.0, step=0.1, key=ui_key(f"robot.items.{i}.purchase_rate_pct"))
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"ロボット保有顧客の月当たり新規課金登録者")
@@ -434,7 +434,7 @@ with tab_settings:
         st.number_input("アプリ月額料金（円）", min_value=0, step=10, key=ui_key("app.monthly_fee"))
         st.number_input("無料期間（月）", min_value=0, max_value=24, step=1, key=ui_key("app.free_months"))
     with col[1]:
-        st.slider("月間解約率（%）", min_value=0.0, max_value=50.0, step=0.5, key=ui_key("app.churn_rate_pct"))
+        st.number_input("月間解約率（%）", min_value=0.0, max_value=50.0, step=0.5, key=ui_key("app.churn_rate_pct"))
 
 
     st.subheader("ロボット販売収益")
@@ -458,7 +458,7 @@ with tab_settings:
                 st.number_input("小売価格（円）", min_value=0, step=1_000, key=ui_key(f"robot.items.{i}.price"))
                 st.number_input("販売開始月", min_value=0, step=1, key=ui_key(f"robot.items.{i}.release_month"))
             with col[1]:
-                st.slider("販売手数料率（%）", 0.0, 25.0, step=1.0, key=ui_key(f"robot.items.{i}.commission_rate_pct"))
+                st.number_input("販売手数料率（%）", min_value=0.0, max_value=25.0, step=1.0, key=ui_key(f"robot.items.{i}.commission_rate_pct"))
 
     # ---- 計算用 params を組み立て（内部表現に正規化）----
     params = build_params_from_state()
