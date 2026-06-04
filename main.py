@@ -849,6 +849,8 @@ orig_robot_margin = [0.0] * MONTHS
 # ----------------------------------------------------
 # 各月ごとのロボット種類別販売台数を保持する配列の初期化
 robot_sales_by_type = [[0] * MONTHS for _ in range(num_robot_types)]
+cost_robot_replacement = [0] * MONTHS
+prev_active_model_key = None
 
 for m in range(MONTHS):
     # 1. 当月の契約販売会社数を算出（実証期間後の成長モデル）
@@ -875,7 +877,10 @@ for m in range(MONTHS):
     is_orig_robot_active = orig_enabled and (m >= orig_release_month)
 
     active_robot_idx = -1
-    if not is_orig_robot_active:
+    current_active_model_key = None
+    if is_orig_robot_active:
+        current_active_model_key = 'original'
+    else:
         # 当月に販売開始されているロボットの中で、最もリリース月が新しいものを特定する
         max_active_release_month = -1
         for i in range(num_robot_types):
@@ -883,6 +888,24 @@ for m in range(MONTHS):
                 if release_month[i] > max_active_release_month:
                     max_active_release_month = release_month[i]
                     active_robot_idx = i
+        if active_robot_idx != -1:
+            current_active_model_key = f'regular_{active_robot_idx}'
+
+    # ロボットの切り替えが発生した場合の交換コストを計上
+    if m > 0 and current_active_model_key != prev_active_model_key and prev_active_model_key is not None:
+        num_existing_companies = contract_companies[m-1]
+        
+        new_robot_unit_cost = 0
+        if is_orig_robot_active:
+            new_robot_unit_cost = orig_price * (1 - orig_gross_margin_rate)
+        elif active_robot_idx != -1:
+            new_robot_unit_cost = robot_prices[active_robot_idx]
+
+        if new_robot_unit_cost > 0:
+            replacement_cost = num_existing_companies * new_robot_unit_cost * robots_per_shop
+            cost_robot_replacement[m] = replacement_cost
+
+    prev_active_model_key = current_active_model_key
 
     for i in range(num_robot_types):
         # 最も新しいアクティブなロボット1種類のみ販売数を計上し、それ以外（旧モデルや市販停止時）は 0 台とする
@@ -1087,6 +1110,7 @@ for m in range(MONTHS):
         + cost_potstill_salary[m]
         + cost_orig_robot_dev[m]
         + orig_robot_manufacturing_cost[m]
+        + cost_robot_replacement[m]
     )
 
 # 月次利益（売上－支出）
@@ -1297,6 +1321,7 @@ with tab_graphs:
             x=months, y=[x/10000 for x in orig_robot_manufacturing_cost],
             name="オリジナルロボ製造コスト"
         ))
+    fig5.add_trace(go.Bar(x=months, y=[x/10000 for x in cost_robot_replacement], name="ロボット交換費用"))
 
     fig5.update_layout(
         title="その他 月次推移（全費目）",
@@ -1384,9 +1409,10 @@ with tab_summary:
         val_sales = sum(cost_shop_acquisition)
         val_cs = sum(cost_customer_support)
         val_mfg = sum(orig_robot_manufacturing_cost)
+        val_robot_replace = sum(cost_robot_replacement)
 
-        labels_exp = ["アプリ開発費", "クラウド費", "人件費", "販売ツール費", "CS費"]
-        values_exp = [val_app_dev, val_cloud, val_labor, val_sales, val_cs]
+        labels_exp = ["アプリ開発費", "クラウド費", "人件費", "販売ツール費", "CS費", "ロボット交換費用"]
+        values_exp = [val_app_dev, val_cloud, val_labor, val_sales, val_cs, val_robot_replace]
         
         if orig_enabled:
             labels_exp.extend(["オリジナルロボ開発費", "製造原価"])
@@ -1404,6 +1430,7 @@ with tab_summary:
         st.write(f"💸 総事業体人件費：**{val_labor/10000:,.0f}万円**")
         st.write(f"💸 総販売ツール費：**{val_sales/10000:,.0f}万円**")
         st.write(f"💸 総カスタマーサポート費：**{val_cs/10000:,.0f}万円**")
+        st.write(f"💸 ロボット交換費用：**{val_robot_replace/10000:,.0f}万円**")
         if orig_enabled:
             st.write(f"💸 総製造原価（MOQ発注累計）：**{val_mfg/10000:,.0f}万円**")
 
