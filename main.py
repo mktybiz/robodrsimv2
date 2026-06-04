@@ -34,9 +34,9 @@ def default_params() -> dict:
                     "release_month": 0,
                 },
                 {
-                    "name": "ポケとも", "price": 39_000,
+                    "name": "AIBI", "price": 59_000,
                     "commission_rate": 0.10, "purchase_rate": 0.09,
-                    "release_month": 10,
+                    "release_month": 3,
                 }
             ]
         },
@@ -46,14 +46,14 @@ def default_params() -> dict:
             "price": 59_000,          # 小売価格（円）
             "gross_margin_rate": 0.40,  # 粗利率（0.0〜1.0）
             "purchase_rate": 0.09,      # 購入率（0.0〜1.0）
-            "release_month": 36,        # 販売開始月（ヶ月目）
-            "dev_cost": 2000,           # 開発費（万円）
+            "release_month": 18,        # 販売開始月（ヶ月目）
+            "dev_cost": 5000,           # 開発費（万円）
             "moq": 1000,                # MOQ（最小発注数量）
-            "cloud_dev_cost": 1000,     # クラウド機能開発費（万円）
+            "cloud_dev_cost": 2000,     # クラウド機能開発費（万円）
         },
         "app": {
-            "monthly_fee": 300,
-            "free_months": 3,
+            "monthly_fee": 1000,
+            "free_months": 1,
             "churn_rate": 0.03,
         },
         # --- 追加：cloud（クラウド閾値） ---
@@ -67,7 +67,7 @@ def default_params() -> dict:
         },
         # 販売会社（増加数）
         "dealer": {
-            "initial_companies": 5,
+            "initial_companies": 1,
             "max_companies": 100,
             "fixed_months_before_growth": 6,
             "company_growth_per_month": 2,
@@ -84,9 +84,8 @@ def default_params() -> dict:
         },
         # 販売店向けロボット・販売ツール
         "tool": {
-            "robot_unit_cost": 269_000,
             "sales_tool_cost_per_shop": 20,
-            "robots_per_shop": 3,
+            "robots_per_shop": 5,
         },
         # カスタマーサポート
         "sport": {
@@ -232,10 +231,6 @@ def init_state_from_params(params: dict) -> None:
     # -----------------------------
     tool = params.get("tool", {})
     st.session_state.setdefault(
-        ui_key("tool.robot_unit_cost"),
-        int(tool.get("robot_unit_cost", 0))
-    )  # 円
-    st.session_state.setdefault(
         ui_key("tool.sales_tool_cost_per_shop"),
         int(tool.get("sales_tool_cost_per_shop", 0))
     )  # 万円
@@ -336,7 +331,6 @@ def build_params_from_state() -> dict:
         },
         # 販売店向けロボット・販売ツール
         "tool": {
-            "robot_unit_cost": int(st.session_state.get(ui_key("tool.robot_unit_cost"), 0)),  # 円
             "sales_tool_cost_per_shop": int(
                 st.session_state.get(ui_key("tool.sales_tool_cost_per_shop"), 0)),  # 円
             "robots_per_shop": int(st.session_state.get(ui_key("tool.robots_per_shop"), 0)),
@@ -447,7 +441,6 @@ def apply_loaded_params_to_state(loaded: dict) -> None:
     # tool（robot_unit_cost: 円、sales_tool_cost_per_shop: 円→UI万円）
     # -----------------------------
     tool = loaded.get("tool", {})
-    st.session_state[ui_key("tool.robot_unit_cost")] = int(tool.get("robot_unit_cost", 0))
     st.session_state[ui_key("tool.sales_tool_cost_per_shop")] = int(tool.get("sales_tool_cost_per_shop", 0))
     st.session_state[ui_key("tool.robots_per_shop")] = int(tool.get("robots_per_shop", 0))
 
@@ -533,7 +526,7 @@ with st.sidebar.expander("設定の保存 / 読み込み"):
 # ----------------------------------------------------
 # 期間パラメータ（★シミュレーション年数）
 # ----------------------------------------------------
-years = st.sidebar.slider("シミュレーション年数（年）", min_value=1, max_value=10, value=7, step=1)
+years = st.sidebar.slider("シミュレーション年数（年）", min_value=1, max_value=10, value=5, step=1)
 MONTHS = years * 12
 
 # ----------------------------------------------------
@@ -788,10 +781,6 @@ with tab_settings:
     st.subheader("販売店向けロボット・販売ツール")
     col11, col12 = st.columns(2)
     with col11:
-        robot_unit_cost = st.number_input(
-            "ロボット1式費用（円）", min_value=0, step=1000,
-            key=ui_key("tool.robot_unit_cost")
-        )
         sales_tool_cost_per_shop = st.number_input(
             "販売ツール一式費用／社（万円）", min_value=0, step=1,
             key=ui_key("tool.sales_tool_cost_per_shop")
@@ -883,14 +872,14 @@ for m in range(MONTHS):
     total_commission = 0.0
 
     # オリジナルロボットが既に販売開始されているかチェック
-    is_orig_robot_active = orig_enabled and (m > orig_release_month)
+    is_orig_robot_active = orig_enabled and (m >= orig_release_month)
 
     active_robot_idx = -1
     if not is_orig_robot_active:
         # 当月に販売開始されているロボットの中で、最もリリース月が新しいものを特定する
         max_active_release_month = -1
         for i in range(num_robot_types):
-            if m > release_month[i]:
+            if m >= release_month[i]:
                 if release_month[i] > max_active_release_month:
                     max_active_release_month = release_month[i]
                     active_robot_idx = i
@@ -910,7 +899,7 @@ for m in range(MONTHS):
     # --- オリジナルロボット（開発・製造・自社販売モデル）の計算 ---
     robots_sold_orig = 0
     revenue_orig = 0.0
-    if orig_enabled and m > orig_release_month:
+    if orig_enabled and m >= orig_release_month:
         # 当月のオリジナルロボット販売台数 ＝ イベント数 × 集客数 × オリジナル購入率
         robots_sold_orig = int(events * attendees_per_event * orig_purchase_rate)
         orig_robot_sales[m] = robots_sold_orig
@@ -1046,9 +1035,30 @@ for m in range(MONTHS):
         diff = contract_companies[m] - contract_companies[m - 1]
         new_companies[m] = diff if diff > 0 else 0
 
-per_shop_acquisition_cost = robots_per_shop * robot_unit_cost + sales_tool_cost_per_shop
 for m in range(MONTHS):
+    # 販売しているロボットの原価を特定
+    robot_unit_cost = 0
+    is_orig_robot_active = orig_enabled and (m >= orig_release_month)
+    
+    if is_orig_robot_active:
+        # オリジナルロボットの場合は製造原価
+        robot_unit_cost = orig_price * (1 - orig_gross_margin_rate)
+    else:
+        # 既存ロボットの場合は最新のアクティブロボットの小売価格
+        max_active_release_month = -1
+        active_robot_idx = -1
+        for i in range(num_robot_types):
+            if m >= release_month[i]:
+                if release_month[i] > max_active_release_month:
+                    max_active_release_month = release_month[i]
+                    active_robot_idx = i
+        
+        if active_robot_idx != -1:
+            robot_unit_cost = robot_prices[active_robot_idx]
+
+    per_shop_acquisition_cost = robots_per_shop * robot_unit_cost + sales_tool_cost_per_shop
     cost_shop_acquisition[m] = new_companies[m] * per_shop_acquisition_cost
+
 
 # 7. 事業体（事務局）人件費の計算
 for m in range(MONTHS):
@@ -1361,10 +1371,11 @@ with tab_summary:
     with col_g2:
         st.subheader("支出構成")
 
-        val_dev = (
+        val_app_dev = (
             sum(cost_app_ios_initial) + sum(cost_app_android_initial) + sum(cost_robot_if_dev)
-            + sum(cost_app_ios_bugfix) + sum(cost_app_android_bugfix) + sum(cost_orig_robot_dev)
+            + sum(cost_app_ios_bugfix) + sum(cost_app_android_bugfix)
         )
+        val_orig_dev = sum(cost_orig_robot_dev)
         val_cloud = (
             sum(cost_cloud_initial_arr) + sum(cost_cloud_aws)
             + sum(cost_cloud_bugfix_arr) + sum(cost_cloud_scale)
@@ -1374,18 +1385,21 @@ with tab_summary:
         val_cs = sum(cost_customer_support)
         val_mfg = sum(orig_robot_manufacturing_cost)
 
-        labels_exp = ["開発費", "クラウド費", "人件費", "販売ツール費", "CS費"]
-        values_exp = [val_dev, val_cloud, val_labor, val_sales, val_cs]
+        labels_exp = ["アプリ開発費", "クラウド費", "人件費", "販売ツール費", "CS費"]
+        values_exp = [val_app_dev, val_cloud, val_labor, val_sales, val_cs]
+        
         if orig_enabled:
-            labels_exp.append("製造原価")
-            values_exp.append(val_mfg)
+            labels_exp.extend(["オリジナルロボ開発費", "製造原価"])
+            values_exp.extend([val_orig_dev, val_mfg])
 
         fig_exp = go.Figure(data=[go.Pie(labels=labels_exp, values=values_exp, hole=.3)])
         fig_exp.update_layout(height=300, margin=dict(t=0, b=0, l=0, r=0))
         st.plotly_chart(fig_exp, use_container_width=True)
 
         st.caption(f"{years}年間の支出内訳")
-        st.write(f"💸 総アプリ開発費（含むオリジナルロボ）：**{val_dev/10000:,.0f}万円**")
+        st.write(f"💸 総アプリ開発費：**{val_app_dev/10000:,.0f}万円**")
+        if orig_enabled:
+            st.write(f"💸 オリジナルロボ開発費：**{val_orig_dev/10000:,.0f}万円**")
         st.write(f"💸 総クラウド開発費：**{val_cloud/10000:,.0f}万円**")
         st.write(f"💸 総事業体人件費：**{val_labor/10000:,.0f}万円**")
         st.write(f"💸 総販売ツール費：**{val_sales/10000:,.0f}万円**")
